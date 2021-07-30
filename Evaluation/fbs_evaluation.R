@@ -35,7 +35,7 @@ results.tuned.aggr$filter = factor(results.tuned.aggr$filter, levels = results.t
 # boxplots and scatterplots
 
 # integrated Brier scores
-pdf("../Plots/graf_box.pdf", width = 10, height = 8)
+pdf("../Plots/graf_box.pdf", width = 10, height = 8.25)
 ggplot(data = results.tuned, mapping = aes(y = graf.test, x = filter)) +
   geom_boxplot() +
   facet_wrap("dataset", ncol = 4, scales = "free") +
@@ -47,8 +47,11 @@ dev.off()
 
 
 # proportions of selected features
+results.tuned.no.km = results.tuned[filter != "Kaplan-Meier", ]
+results.tuned.no.km$filter = droplevels(results.tuned.no.km$filter)
+
 pdf("../Plots/prop_box.pdf", width = 10, height = 8)
-ggplot(data = results.tuned, mapping = aes(y = selected.perc, x = filter)) +
+ggplot(data = results.tuned.no.km, mapping = aes(y = selected.perc, x = filter)) +
   geom_boxplot() +
   facet_wrap("dataset", ncol = 4, scales = "free") +
   theme_bw() +
@@ -57,14 +60,14 @@ ggplot(data = results.tuned, mapping = aes(y = selected.perc, x = filter)) +
   ylab("Proportion of selected features")
 dev.off()
 
-perc.med = results.tuned[, list(mean.selected = mean(selected.perc)), by = "filter"]
+perc.med = results.tuned.no.km[, list(mean.selected = mean(selected.perc)), by = "filter"]
 
 scaleFUN = function(x) {
   sprintf("%.2f", x)
 }
 
 pdf("../Plots/prop_box_aggr.pdf", width = 5, height = 4)
-ggplot(data = results.tuned, mapping = aes(y = selected.perc, x = filter)) +
+ggplot(data = results.tuned.no.km, mapping = aes(y = selected.perc, x = filter)) +
   geom_boxplot() +
   geom_text(data = perc.med, aes(x = filter, y = -0.04,
     label = scaleFUN(mean.selected)), size = 2.75) +
@@ -169,7 +172,7 @@ dom.n = names(sort(rowSums(n.dominated), decreasing = FALSE))
 dom.o = n.dominated[dom.n, dom.n]
 diag(dom.o) = NA
 
-pdf("../Plots/better_graf.pdf", width = 8.25, height = 6)
+pdf("../Plots/better_graf.pdf", width = 8, height = 6)
 plot_mat(t(dom.o), dom.n, n.datasets = length(unique(results.tuned.aggr$dataset)))
 dev.off()
 

@@ -23,5 +23,6 @@ reduce.and.aggregate.features = function(ids) {
   return(res)
 }
 
-results.features = reduce.and.aggregate.features(results.tuned$job.id)
+results.tuned.no.km = results.tuned[filter != "Kaplan-Meier", ]
+results.features = reduce.and.aggregate.features(results.tuned.no.km$job.id)
 save(results.features, file = "fbs_results_features.RData")

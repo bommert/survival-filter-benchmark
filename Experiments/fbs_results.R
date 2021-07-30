@@ -11,6 +11,7 @@ all = unwrap(getJobTable(findDone()))
 ids.ranking = all[algorithm == "ranking", ]
 ids.filter = all[algorithm == "filter", ]
 ids.filter.boosting = all[algorithm == "filter.boosting", ]
+ids.kaplan = all[algorithm == "kaplan", ]
 
 # rename filter methods
 filter.rename.fun = function(results) {
@@ -82,7 +83,34 @@ reduce.and.aggregate.filter.boosting = function(ids) {
 
 results.filter2 = reduce.and.aggregate.filter.boosting(ids.filter.boosting)
 
-results.filter = rbind(results.filter1, results.filter2)
+
+fun.kaplan = function(job, res) {
+  data.table(
+    job.id = job$job.id,
+    dataset = job$prob.name,
+    filter = "Kaplan-Meier",
+    outer.iter = job$prob.pars$outer.iter,
+    filter.perc = 0,
+    selected.perc = 0,
+    graf.train.mean = mean(res$performance.train$surv.graf),
+    cindex.train.mean = mean(res$performance.train$surv.uno_c),
+    graf.test = res$performance.test["surv.graf"],
+    cindex.test = res$performance.test["surv.uno_c"],
+    time.train.median = median(res$training.time.train + res$prediction.time.train),
+    time.test = res$training.time.test + res$prediction.time.test
+  )
+}
+
+reduce.and.aggregate.kaplan = function(ids) {
+  ids = findDone(ids)
+  res = reduceResultsDataTable(ids, fun = fun.kaplan)
+  res = bind_rows(res$result)
+  return(res)
+}
+
+results.kaplan = reduce.and.aggregate.kaplan(ids.kaplan)
+
+results.filter = rbind(results.filter1, results.filter2, results.kaplan)
 results.filter = filter.rename.fun(results.filter)
 
 save(results.filter, file = "fbs_results_filter.RData")

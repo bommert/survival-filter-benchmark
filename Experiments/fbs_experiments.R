@@ -224,6 +224,50 @@ addAlgorithm(
   }
 )
 
+# Kaplan-Meier baseline
+addAlgorithm(
+  name = "kaplan",
+  fun = function(job, data, instance) {
+
+    # Kaplan-Meier estimator
+    glrn = lrn("surv.kaplan")
+
+    # performance measures
+    measures = list(msr("surv.graf"), msr("surv.cindex", weight_meth = "G2"))
+    measures.names = c("surv.graf", "surv.uno_c")
+
+    train.ids = instance$task.train$row_ids
+    test.ids = setdiff(instance$task.all$row_ids, train.ids)
+
+    # resample on training data of outer CV iteration
+    rr = resample(instance$task.train, glrn, instance$rin.train, store_models = TRUE)
+    performance.train = rr$score(measures)[, measures.names, with = FALSE]
+    training.time.train = sapply(rr$learners, function(l) l$timings["train"])
+    prediction.time.train = sapply(rr$learners, function(l) l$timings["predict"])
+
+    # evaluate performance on test data of outer CV iteration
+    # (may only be looked at, if this configuration is selected based on the results on the training data)
+    t1 = Sys.time()
+    glrn$train(instance$task.all, row_ids = train.ids)
+    t2 = Sys.time()
+    training.time.test = as.numeric(difftime(t2, t1), unit = "secs")
+
+    t3 = Sys.time()
+    pred = glrn$predict(instance$task.all, row_ids = test.ids)
+    t4 = Sys.time()
+    prediction.time.test = as.numeric(difftime(t4, t3), unit = "secs")
+
+    performance.test = pred$score(measures, task = instance$task.all, train_set = train.ids)
+
+    return(list(
+      performance.train = performance.train,
+      performance.test = performance.test,
+      training.time.train = training.time.train,
+      training.time.test = training.time.test,
+      prediction.time.train = prediction.time.train,
+      prediction.time.test = prediction.time.test
+    ))
+  })
 
 
 #####################################################################################
@@ -294,7 +338,13 @@ addExperiments(
   prob.designs = design.probs.filter
 )
 
+addExperiments(
+  algo.designs = list(kaplan = data.frame()),
+  prob.designs = design.probs.filter
+)
+
 
 ids.ranking = findExperiments(algo.name = "ranking")
 ids.filter = findExperiments(algo.name = "filter")
 ids.boost = findExperiments(algo.name = "filter.boosting")
+ids.kaplan = findExperiments(algo.name = "kaplan")
